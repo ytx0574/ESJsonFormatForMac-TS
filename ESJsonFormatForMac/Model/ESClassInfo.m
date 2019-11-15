@@ -64,13 +64,13 @@
     
     NSMutableString *resultStr = [NSMutableString stringWithFormat:@"@class "];
     for (ESClassInfo *classInfo in array) {
-        [resultStr appendFormat:@"%@,",classInfo.className];
+        [resultStr appendFormat:@"%@, ",classInfo.className];
     }
 
-    if ([resultStr hasSuffix:@","]) {
-        resultStr = [NSMutableString stringWithString:[resultStr substringToIndex:resultStr.length-1]];
+    if ([resultStr hasSuffix:@", "]) {
+        resultStr = [NSMutableString stringWithString:[resultStr substringToIndex:resultStr.length - 2]];
     }
-    [resultStr appendString:@";"];
+    [resultStr appendString:@";\n"];
     return resultStr;
 }
 

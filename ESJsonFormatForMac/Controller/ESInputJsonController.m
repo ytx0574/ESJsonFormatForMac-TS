@@ -97,7 +97,7 @@
         //因为我没有找到设置segmentcontroller初始设置选中的方法...所以...这样了
         [[NSUserDefaults standardUserDefaults] setBool:self.isSwift forKey:@"isSwift"];
         [[NSUserDefaults standardUserDefaults] setBool:self.isTs forKey:@"isTs"];
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"isYYModel"];
+        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"isYYModel"];
         self.rowCount = 1;
         self.selectedRow = -1;
         

@@ -16,10 +16,12 @@
 #import "ESPbxprojInfo.h"
 #import "ESClassInfo.h"
 
-
+const NSString * const kDictionaryContentCodeRowPrefix = @" \t\t\t";
+const NSString * const kDictionaryContentCodeRowSuffix = @", \n";
 @interface ESJsonFormatManager()
 
 @end
+
 @implementation ESJsonFormatManager
 
 + (NSString *)parsePropertyContentWithClassInfo:(ESClassInfo *)classInfo{
@@ -255,19 +257,7 @@
     
     NSMutableString *result = [NSMutableString stringWithString:@""];
     if ([ESJsonFormatSetting defaultSetting].impOjbClassInArray) {
-        
-        
-        BOOL isYYModel = [[NSUserDefaults standardUserDefaults] boolForKey:@"isYYModel"];
-        
-        if (isYYModel) {
-            
-            [result appendFormat:@"@implementation %@\n%@\n%@\n@end\n",classInfo.className,[self methodContentOfObjectClassInArrayWithClassInfo:classInfo],[self methodContentOfObjectIDInArrayWithClassInfo:classInfo]];
-        }else{
-            
-            [result appendFormat:@"@implementation %@\n%@\n@end\n",classInfo.className,[self methodContentOfObjectClassInArrayWithClassInfo:classInfo]];
-        }
-
-            
+        [result appendFormat:@"@implementation %@\n%@\n%@\n@end\n",classInfo.className,[self methodContentOfObjectClassInArrayWithClassInfo:classInfo],[self methodContentOfObjectIDInArrayWithClassInfo:classInfo]];
     }else{
         [result appendFormat:@"@implementation %@\n\n@end\n",classInfo.className];
     }
@@ -373,30 +363,24 @@
  *  @return
  */
 + (NSString *)methodContentOfObjectClassInArrayWithClassInfo:(ESClassInfo *)classInfo{
-    
 
-    if (classInfo.propertyArrayDic.count==0) {
+    if (classInfo.propertyArrayDic.count == 0) {
         return @"";
     }else{
         NSMutableString *result = [NSMutableString string];
         for (NSString *key in classInfo.propertyArrayDic) {
             ESClassInfo *childClassInfo = classInfo.propertyArrayDic[key];
-            [result appendFormat:@"@\"%@\" : [%@ class], ",key,childClassInfo.className];
+            [result appendFormat:@"%@@\"%@\": [%@ class]%@", kDictionaryContentCodeRowPrefix,  key, childClassInfo.className, kDictionaryContentCodeRowSuffix];
         }
-        if ([result hasSuffix:@", "]) {
-            result = [NSMutableString stringWithFormat:@"%@",[result substringToIndex:result.length-2]];
-        }
-        
         
         BOOL isYYModel = [[NSUserDefaults standardUserDefaults] boolForKey:@"isYYModel"];
         NSString *methodStr = nil;
         if (isYYModel) {
-            
-            //append method content (objectClassInArray) if YYModel
-            methodStr = [NSString stringWithFormat:@"\n+ (NSDictionary<NSString *,id> *)modelContainerPropertyGenericClass{\n    return @{%@};\n}\n",result];
+            //append method content (modelContainerPropertyGenericClass) if YYModel
+            methodStr = [NSString stringWithFormat:@"\n+ (NSDictionary <NSString *, Class> *)modelContainerPropertyGenericClass\n{\n    return @{\n%@%@};\n}\n", result, kDictionaryContentCodeRowPrefix];
         }else{
-            // append method content (objectClassInArray)
-            methodStr = [NSString stringWithFormat:@"\n+ (NSDictionary *)objectClassInArray{\n    return @{%@};\n}\n",result];
+            // append method content (mj_objectClassInArray)
+            methodStr = [NSString stringWithFormat:@"\n+ (NSDictionary <NSString *, Class> *)mj_objectClassInArray\n{\n    return @{\n%@%@};\n}\n", result, kDictionaryContentCodeRowPrefix];
         }
         
         return methodStr;
@@ -405,32 +389,34 @@
 
 
 + (NSString *)methodContentOfObjectIDInArrayWithClassInfo:(ESClassInfo *)classInfo{
-    
 
-        NSMutableString *result = [NSMutableString string];
-        NSDictionary *dic = classInfo.classDic;
-         NSLog(@"%@",dic);
-        [dic enumerateKeysAndObjectsUsingBlock:^(id key, NSObject *obj, BOOL *stop) {
+    NSMutableString *result = [NSMutableString string];
+    NSDictionary *dic = classInfo.classDic;
+    NSLog(@"%@", dic);
+    [dic enumerateKeysAndObjectsUsingBlock:^(id key, NSObject *obj, BOOL *stop) {
+        NSLog(@"key====%@",key);
+        NSLog(@"obj====%@",obj);
         
+        if ([ESUppercaseKeyWords containsObject:key] && [ESJsonFormatSetting defaultSetting].uppercaseKeyWordForId) {
            
-            NSLog(@"key====%@",key);
-            NSLog(@"obj====%@",obj);
-            NSLog(@"=============================");
-            if ([ESUppercaseKeyWords containsObject:key] && [ESJsonFormatSetting defaultSetting].uppercaseKeyWordForId) {
-               
-
-                [result appendFormat:@"@\"%@\":@\"%@\", ",[key uppercaseString],key];
-            }
-            
-        }];
-        
-        if ([result hasSuffix:@", "]) {
-            result = [NSMutableString stringWithFormat:@"%@",[result substringToIndex:result.length-2]];
-            NSString *methodStr = [NSString stringWithFormat:@"\n+ (NSDictionary<NSString *,id> *)modelCustomPropertyMapper{\n    return @{%@};\n}\n",result];
-            return methodStr;
+            [result appendFormat:@"%@@\"%@\": @\"%@\"%@", kDictionaryContentCodeRowPrefix, [key uppercaseString], key, kDictionaryContentCodeRowSuffix];
         }
+    }];
+
+    if (result.length == 0) {
+        return @"";
+    }
     
-        return result;
+    BOOL isYYModel = [[NSUserDefaults standardUserDefaults] boolForKey:@"isYYModel"];
+    NSString *methodStr = nil;
+    if (isYYModel) {
+        methodStr = [NSString stringWithFormat:@"\n+ (NSDictionary <NSString *,NSString *> *)modelCustomPropertyMapper\n{\n    return @{\n%@%@};\n}\n", result, kDictionaryContentCodeRowPrefix];
+    }else {
+        methodStr = [NSString stringWithFormat:@"\n+ (NSDictionary <NSString *,NSString *> *)mj_replacedKeyFromPropertyName\n{\n    return @{\n%@%@};\n}\n", result, kDictionaryContentCodeRowPrefix];
+    }
+
+    return methodStr;
+
 }
 
 /**
